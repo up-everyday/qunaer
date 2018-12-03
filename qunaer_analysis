@@ -1,0 +1,100 @@
+import pandas
+import numpy
+from pyecharts import Geo,Bar,Map,Page
+import requests
+
+def make_bar(name, ordered_result):
+    attr,value=[],[]
+    #top 10
+    for name_sale_elem in ordered_result:
+        attr.append(name_sale_elem[0]) #name
+        value.append(name_sale_elem[1]) #sale
+    top_bar = Bar()
+    top_bar.add(name, attr, value,
+                #is_visualmap=True,
+                visual_text_color='#fff',
+                mark_point=["average"], mark_line=["average"],
+                is_more_utils=True,
+                is_label_show=True,
+                is_datazoom_show=True,
+                xaxis_rotate=45)
+    return top_bar
+def name_sale(resort_name, monthly_sales, grade):#看各级的销量
+    name_sale_list=[]
+    for i in range(len(resort_name)):
+        if not numpy.isnan(monthly_sales[i]):
+            name_sale_elem = []
+            name_sale_elem.append(resort_name[i])
+            name_sale_elem.append(monthly_sales[i])
+            ##all
+            name_sale_list.append(name_sale_elem)
+    ordered_result=sorted(name_sale_list,
+              key=lambda name_sale_elem:name_sale_elem[1], #1  -> monthly_sales
+              reverse=True)
+    page=Page()
+    name = str(grade) + 'A景区月销量top10排行'
+    top_bar = make_bar(name, ordered_result[:10])
+    page.add_chart(top_bar)
+    name = str(grade) + 'A景区月销量down10排行'
+    down_bar = make_bar(name, ordered_result[-10:])
+    page.add_chart(down_bar)
+
+    page.render('5'+"A景区销量bar.html")
+def data_visualization(attr, value):
+    geo = Geo("景点", "data from ", title_color="#fff",
+              title_pos="center", width=1200, height=600, background_color='#404a59')
+    # add()数据及配置项
+    filename = r'D:/python_work/text_book/111.csv'
+    info = pandas.read_csv(filename, engine='python', encoding='utf-8', header=None)
+    for i in zip(info[1], info[3]):
+        longitude, latitude = i[0].split(',')
+        print(i[1], longitude, latitude)
+        geo.add_coordinate(i[1], longitude, latitude)
+
+    geo.add("xx", attr, value, type="effectScatter", is_random=True, effect_scale=5)
+    geo.render(path="my_first_bar.html")  # render() 生成 .html 文件
+
+def geo_info(city, name, province, level):#高德地图可视化
+
+    for i in range(len(name)):
+        x = pandas.DataFrame()
+        t={}
+        add = name[i]
+        chengshi=city[i]
+        parameters = { 'address': add, 'key': '58b999a4af5042355d347fbf0227e1f3','city':chengshi }
+        html = requests.get('https://restapi.amap.com/v3/geocode/geo', params=parameters).json()
+        print(html)
+        try:
+            t['jingwei'] = html['geocodes'][0]['location']
+        except IndexError:
+            t['jingwei']='0,0'
+        finally:
+            t['n'] = name[i]
+            t['level']=level[i]
+            t['pro']=province[i]
+            t['city']=city[i]
+            x = x.append(t, ignore_index=True)
+            x.to_csv('111.csv', encoding='utf-8', index=False, mode='a', header=False)
+def info_by_grade(filename, grade):
+    qunaer = pandas.read_csv(filename, engine='python', encoding='utf-8', header=None)
+    province, city, name, level, price, num, hot, comment = [], [], [], [], [], [], [], []
+    for row in zip(qunaer[0], qunaer[1], qunaer[2], qunaer[3], qunaer[4], qunaer[5], qunaer[6], qunaer[7]):
+        if row[3] == grade :
+            province.append(row[0])
+            city.append(row[1])
+            name.append(row[2])
+            level.append(row[3])
+            price.append(row[4])
+            num.append(row[5])
+            hot.append(row[6])
+            comment.append(row[7])
+    #geo_info(city, name, province, level)
+    data_visualization(name, num)
+    #name_sale(name, num, grade)
+    #money(name,price,k)
+    #sum_pro(pro,k)
+    return price, num,hot
+if __name__ == '__main__':
+    filename = 'qunaer.csv'
+    #read_data(filename)
+    info_by_grade(filename, 5)
