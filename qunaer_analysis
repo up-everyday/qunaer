@@ -40,19 +40,17 @@ def name_sale(resort_name, monthly_sales, grade):#看各级的销量
     page.add_chart(down_bar)
 
     page.render('5'+"A景区销量bar.html")
-def data_visualization(attr, value):
+
+def data_visualization(geoinfo_file,attr, value):
     geo = Geo("5A景点分布", "数据来源去哪儿",title_color="#fff",
               title_pos="center", width=1200, height=600, background_color='#404a59')
     # add()数据及配置项
-    filename = r'D:/python_work/text_book/111.csv'
-    #info = pandas.read_csv(filename, engine='python', encoding='utf-8', header=None)
-    info = pandas.read_csv(filename, engine='python', encoding='utf-8',header=None,
+    info = pandas.read_csv(geoinfo_file, engine='python', encoding='utf-8',
+                           header=None,
                            names=['city','lon_lat','level','name','province'])
-    print(info)
-    for i in zip(info['lon_lat'], info['name']):
-        longitude, latitude = i[0].split(',')
-        print(i[1], longitude, latitude)
-        geo.add_coordinate(i[1], longitude, latitude)
+    for longit_lat,spot_name in list(zip(info['lon_lat'], info['name'])):
+        longitude, latitude = longit_lat.split(',')
+        geo.add_coordinate(spot_name, longitude, latitude)
 
     geo.add("xx", attr, value, type="effectScatter", is_random=True, effect_scale=5)
     geo.render(path="my_first_bar.html")  # render() 生成 .html 文件
@@ -79,25 +77,29 @@ def geo_info(city, name, province, level):#高德地图可视化
             x = x.append(t, ignore_index=True)
             x.to_csv('111.csv', encoding='utf-8', index=False, mode='a', header=False)
 def info_by_grade(filename, grade):
-    qunaer = pandas.read_csv(filename, engine='python', encoding='utf-8', header=None)
-    province, city, name, level, price, num, hot, comment = [], [], [], [], [], [], [], []
-    for row in zip(qunaer[0], qunaer[1], qunaer[2], qunaer[3], qunaer[4], qunaer[5], qunaer[6], qunaer[7]):
-        if row[3] == grade :
-            province.append(row[0])
-            city.append(row[1])
-            name.append(row[2])
-            level.append(row[3])
-            price.append(row[4])
-            num.append(row[5])
-            hot.append(row[6])
-            comment.append(row[7])
-    #geo_info(city, name, province, level)
-    data_visualization(name, num)
+    qunaer = pandas.read_csv(filename, engine='python', encoding='utf-8',
+                             header=None,
+                             names=['province', 'city', 'name', 'level', 'price', 'num','hot', 'comment'])
+    province_li, city_li, name_li, level_li, price_li, num_li, hot_li, comment_li = [], [], [], [], [], [], [], []
+    for province, city, name, level, price, num, hot, comment in \
+            zip(qunaer['province'], qunaer['city'], qunaer['name'], qunaer['level'], qunaer['price'], qunaer['num'], qunaer['hot'], qunaer['comment']):
+        if level == grade :
+            province_li.append(province)
+            city_li.append(city)
+            name_li.append(name)
+            level_li.append(level)
+            price_li.append(price)
+            num_li.append(num)
+            hot_li.append(hot)
+            comment_li.append(comment)
+    #geo_info(city_li, name_li, province_li, level_li)
+    geoinfo_file = r'D:/python_work/text_book/111.csv'
+    data_visualization(geoinfo_file, name_li, num_li)
     #name_sale(name, num, grade)
     #money(name,price,k)
     #sum_pro(pro,k)
     return price, num,hot
 if __name__ == '__main__':
-    filename = 'qunaer.csv'
+    filename = r'D:/python_work/text_book/qunaer.csv'
     #read_data(filename)
     info_by_grade(filename, 5)
